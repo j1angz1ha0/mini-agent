@@ -1,0 +1,20 @@
+# 敏感信息：绝不上传真实 Key
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.Python
+
+# Agent 运行时产物
+workspace/
+*.log
+
+# 编辑器 / 系统
+.DS_Store
+.idea/
+.vscode/
