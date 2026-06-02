@@ -107,7 +107,11 @@ def save_file(filename: str, content: str) -> str:
     safe_name = Path(filename).name
     path = WORKSPACE / safe_name
     path.write_text(content, encoding="utf-8")
-    return f"已保存到 {path}（共 {len(content)} 字）。"
+    # 返回绝对路径，让用户一眼知道文件存在硬盘的哪个位置
+    return (
+        f"文件已成功保存到本地硬盘（共 {len(content)} 字）。\n"
+        f"完整路径: {path.resolve()}"
+    )
 
 
 @tool
