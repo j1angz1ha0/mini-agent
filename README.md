@@ -191,6 +191,9 @@ LLM_MODEL=deepseek-chat                 # 换成对应模型名
 **后端 / AI**：Python · LangChain 1.x · FastAPI · OpenAI 兼容接口 · rembg(u2net) · BeautifulSoup
 **前端 / 桌面**：Electron · 原生 HTML/CSS/JS · Canvas · localStorage
 
+> 📚 想了解每个功能的实现原理、踩过的坑、性能优化，以及怎么写进简历 / 应对面试，
+> 见 **[`docs/项目深度文档.md`](docs/项目深度文档.md)**。
+
 ---
 
 ## 🗺️ Roadmap
