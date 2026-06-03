@@ -32,10 +32,11 @@
 
 ## 🎬 预览
 
-> 💡 录一段桌宠演示（拖拽 / 聊天 / 换肤 / 抠图），保存为 `docs/demo.gif`，
-> 然后把下面这行注释打开，README 顶部就会出现动图：
->
-> `<img src="docs/demo.gif" alt="桌面宠物演示" width="420">`
+<div align="center">
+  <img src="docs/demo.png" alt="桌面宠物 · 自定义皮肤（头像经 AI 抠图，透明无白边）" width="420">
+  <br>
+  <sub>自定义皮肤：上传立绘 → AI 抠图去背景 → 透明融入桌面，可拖拽 / 聊天 / 换人设</sub>
+</div>
 
 ---
 
