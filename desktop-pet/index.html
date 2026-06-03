@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>桌面宠物</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+        user-select: none;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        overflow: hidden;
+      }
+
+      /* 整个宠物组合，锚定在窗口底部居中；宽度由内容决定 */
+      /* 宠物组合在全屏透明层里自由定位，初始位置由 JS 设定 */
+      #petWrap {
+        position: fixed;
+        left: 0;
+        top: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      /* 对话气泡：浮在宠物上方 */
+      #bubble {
+        position: absolute;
+        bottom: 100%;
+        margin-bottom: 6px;
+        max-width: 280px;
+        min-width: 60px;
+        padding: 11px 15px;
+        background: rgba(255, 255, 255, 0.97);
+        border-radius: 15px;
+        box-shadow: 0 6px 22px rgba(0, 0, 0, 0.18);
+        font-size: 14px;
+        line-height: 1.5;
+        color: #333;
+        white-space: pre-wrap;
+        word-break: break-word;
+        max-height: 240px;
+        overflow-y: auto;
+        opacity: 0;
+        transform: translateY(6px);
+        transition: opacity 0.22s, transform 0.22s;
+        pointer-events: none;
+      }
+      #bubble.show {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+      }
+
+      /* 宠物本体（默认皮肤）——以后会被社区皮肤替换 */
+      #pet {
+        width: 130px;
+        height: 130px;
+        cursor: grab;
+        animation: bob 2.6s ease-in-out infinite;
+      }
+      #petWrap.dragging #pet {
+        cursor: grabbing;
+        animation: none;
+      }
+      #pet:active {
+        cursor: grabbing;
+      }
+      #pet.thinking {
+        animation: bob 0.8s ease-in-out infinite;
+      }
+      @keyframes bob {
+        0%,
+        100% {
+          transform: translateY(0) rotate(-1.5deg);
+        }
+        50% {
+          transform: translateY(-7px) rotate(1.5deg);
+        }
+      }
+
+      /* 关闭键：贴在宠物右上角，默认隐藏，悬停才显示 */
+      #close {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        width: 22px;
+        height: 22px;
+        border: none;
+        border-radius: 50%;
+        background: rgba(255, 110, 110, 0.95);
+        color: #fff;
+        font-size: 12px;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        opacity: 0;
+        transform: scale(0.6);
+        transition: opacity 0.18s, transform 0.18s;
+        pointer-events: none;
+        -webkit-app-region: no-drag;
+      }
+
+      /* 控制区：贴在宠物正下方，默认隐藏，悬停才显示 */
+      #controls {
+        position: absolute;
+        top: 100%;
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        padding-top: 4px; /* 与宠物无缝衔接，避免悬停断开 */
+        opacity: 0;
+        transform: translateY(-6px);
+        transition: opacity 0.18s, transform 0.18s;
+        pointer-events: none;
+        -webkit-app-region: no-drag;
+      }
+      #msg {
+        width: 180px;
+        padding: 8px 12px;
+        border: none;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.97);
+        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15);
+        font-size: 13px;
+        outline: none;
+      }
+      #send {
+        border: none;
+        border-radius: 50%;
+        width: 34px;
+        height: 34px;
+        cursor: pointer;
+        font-size: 15px;
+        color: #fff;
+        background: linear-gradient(135deg, #5b8def, #7b6cf6);
+        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15);
+        transition: transform 0.1s;
+      }
+      #send:active {
+        transform: scale(0.92);
+      }
+
+      /* 悬停（active）时显示关闭键与控制区 */
+      #petWrap.active #close,
+      #petWrap.active #controls {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        pointer-events: auto;
+      }
+
+      /* 右键菜单 */
+      #menu {
+        position: absolute;
+        top: 30%;
+        left: 100%;
+        margin-left: 6px;
+        background: rgba(255, 255, 255, 0.98);
+        border-radius: 10px;
+        box-shadow: 0 6px 22px rgba(0, 0, 0, 0.2);
+        padding: 5px;
+        font-size: 13px;
+        display: none;
+        white-space: nowrap;
+        -webkit-app-region: no-drag;
+        z-index: 10;
+      }
+      #menu.open {
+        display: block;
+      }
+      #menu div {
+        padding: 7px 14px;
+        border-radius: 7px;
+        cursor: pointer;
+        color: #333;
+      }
+      #menu div:hover {
+        background: #f0f0f5;
+      }
+
+      /* 思考动画的小圆点 */
+      .dot {
+        display: inline-block;
+        animation: blink 1.2s infinite;
+      }
+      .dot:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+      .dot:nth-child(3) {
+        animation-delay: 0.4s;
+      }
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 0.2;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="petWrap">
+      <div id="bubble" class="interactive"></div>
+      <button id="close" class="interactive" title="退出">✕</button>
+
+      <!-- 默认皮肤：一只 SVG 小猫，以后由社区皮肤替换 -->
+      <svg
+        id="pet"
+        class="interactive"
+        viewBox="0 0 200 200"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <ellipse cx="100" cy="185" rx="55" ry="10" fill="rgba(0,0,0,0.12)" />
+        <ellipse cx="100" cy="125" rx="62" ry="58" fill="#ffd66b" />
+        <polygon points="55,80 45,30 90,62" fill="#ffd66b" />
+        <polygon points="145,80 155,30 110,62" fill="#ffd66b" />
+        <polygon points="58,72 52,45 80,62" fill="#ff9ec4" />
+        <polygon points="142,72 148,45 120,62" fill="#ff9ec4" />
+        <ellipse cx="100" cy="115" rx="50" ry="46" fill="#ffe49a" />
+        <ellipse class="eye" cx="80" cy="108" rx="8" ry="11" fill="#3a3a3a" />
+        <ellipse class="eye" cx="120" cy="108" rx="8" ry="11" fill="#3a3a3a" />
+        <circle cx="83" cy="104" r="3" fill="#fff" />
+        <circle cx="123" cy="104" r="3" fill="#fff" />
+        <ellipse cx="68" cy="128" rx="9" ry="6" fill="#ff9ec4" opacity="0.7" />
+        <ellipse cx="132" cy="128" rx="9" ry="6" fill="#ff9ec4" opacity="0.7" />
+        <path
+          d="M96 122 q4 5 8 0"
+          stroke="#3a3a3a"
+          stroke-width="2"
+          fill="none"
+          stroke-linecap="round"
+        />
+        <line x1="40" y1="115" x2="65" y2="118" stroke="#caa64a" stroke-width="2" />
+        <line x1="40" y1="125" x2="65" y2="125" stroke="#caa64a" stroke-width="2" />
+        <line x1="160" y1="115" x2="135" y2="118" stroke="#caa64a" stroke-width="2" />
+        <line x1="160" y1="125" x2="135" y2="125" stroke="#caa64a" stroke-width="2" />
+      </svg>
+
+      <div id="controls" class="interactive">
+        <input id="msg" type="text" placeholder="跟我聊点什么吧…" autocomplete="off" />
+        <button id="send" title="发送">➤</button>
+      </div>
+
+      <div id="menu" class="interactive">
+        <div data-action="reset">🧹 清空对话记忆</div>
+        <div data-action="quit">🚪 退出</div>
+      </div>
+    </div>
+
+    <script src="renderer.js"></script>
+  </body>
+</html>

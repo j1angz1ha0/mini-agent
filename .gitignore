@@ -14,6 +14,10 @@ env/
 workspace/
 *.log
 
+# Node / Electron
+node_modules/
+desktop-pet/node_modules/
+
 # 编辑器 / 系统
 .DS_Store
 .idea/
