@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, screen } = require("electron");
+const { app, BrowserWindow, ipcMain, screen, globalShortcut } = require("electron");
 const path = require("path");
 
 let win = null;
@@ -42,9 +42,19 @@ function createWindow() {
 
 app.whenReady().then(() => {
   createWindow();
+
+  // 全局快捷键：把宠物召回到屏幕可见位置（防止它被拖出屏幕后找不回来）
+  globalShortcut.register("CommandOrControl+Shift+P", () => {
+    if (win) win.webContents.send("recall-pet");
+  });
+
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+});
+
+app.on("will-quit", () => {
+  globalShortcut.unregisterAll();
 });
 
 app.on("window-all-closed", () => {

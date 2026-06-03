@@ -4,4 +4,5 @@ const { contextBridge, ipcRenderer } = require("electron");
 contextBridge.exposeInMainWorld("petAPI", {
   quit: () => ipcRenderer.send("app-quit"),
   setIgnoreMouse: (ignore) => ipcRenderer.send("set-ignore-mouse", ignore),
+  onRecall: (cb) => ipcRenderer.on("recall-pet", cb),
 });

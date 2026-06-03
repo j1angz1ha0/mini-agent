@@ -8,3 +8,7 @@ beautifulsoup4>=4.12.0
 rich>=13.7.0
 fastapi>=0.115.0
 uvicorn>=0.30.0
+
+# 桌宠皮肤：上传图自动 AI 抠图（首次运行会下载 u2net 模型到 ~/.u2net/）
+rembg[cpu]>=2.0.0
+pillow>=10.0.0

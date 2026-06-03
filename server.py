@@ -10,12 +10,14 @@
 
 from __future__ import annotations
 
-from langchain_core.messages import AIMessage, HumanMessage
+import base64
+
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from src.agent import build_agent
+from src.agent import build_agent, BASE_INSTRUCTIONS
 
 app = FastAPI(title="mini-agent desktop pet API")
 
@@ -33,17 +35,31 @@ _agent = None
 # 每个会话的历史消息：{session_id: [HumanMessage, AIMessage, ...]}
 _sessions: dict[str, list] = {}
 
+# rembg 抠图会话（懒加载；首次调用会下载 u2net 模型到 ~/.u2net/）
+_rembg_session = None
+
 
 def get_agent():
     global _agent
     if _agent is None:
-        _agent = build_agent()
+        # 不内置系统提示，由每次请求按皮肤注入人设
+        _agent = build_agent(system_prompt=None)
     return _agent
+
+
+def get_rembg_session():
+    global _rembg_session
+    if _rembg_session is None:
+        from rembg import new_session
+
+        _rembg_session = new_session("u2net")
+    return _rembg_session
 
 
 class ChatRequest(BaseModel):
     message: str
     session_id: str = "default"
+    persona: str = ""  # 当前皮肤的人设（说话风格/性格），可为空
 
 
 class ChatResponse(BaseModel):
@@ -58,16 +74,53 @@ def health() -> dict:
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest) -> ChatResponse:
-    """收到一条消息，跑 Agent，返回回答，并更新该会话的记忆。"""
+    """收到一条消息，跑 Agent，返回回答，并更新该会话的记忆。
+
+    history 只存对话本身(Human/AI)；系统提示(基础指令 + 当前皮肤人设)
+    每次请求实时拼装并放在最前面，这样切换皮肤即可切换说话风格。
+    """
     history = _sessions.setdefault(req.session_id, [])
     history.append(HumanMessage(content=req.message))
 
+    system_text = BASE_INSTRUCTIONS
+    if req.persona.strip():
+        system_text += "\n\n【你的角色设定】\n" + req.persona.strip()
+
+    messages = [SystemMessage(content=system_text)] + history
+
     agent = get_agent()
-    result = agent.invoke({"messages": history})
+    result = agent.invoke({"messages": messages})
     reply = result["messages"][-1].content
 
     history.append(AIMessage(content=reply))
     return ChatResponse(reply=reply)
+
+
+class RemoveBgRequest(BaseModel):
+    image: str  # dataURL（data:image/png;base64,xxx）或纯 base64
+
+
+class RemoveBgResponse(BaseModel):
+    image: str  # 抠图后的透明 PNG，dataURL 形式
+
+
+@app.post("/remove-bg", response_model=RemoveBgResponse)
+def remove_bg(req: RemoveBgRequest) -> RemoveBgResponse:
+    """对上传的图片做 AI 抠图，返回透明背景的 PNG。
+
+    前端把图片(dataURL)发过来，这里用 rembg(u2net 模型)分割前景，
+    去掉背景后再转回 dataURL 返回。首次调用会下载模型，稍慢。
+    """
+    from rembg import remove
+
+    raw = req.image.strip()
+    if raw.startswith("data:") and "," in raw:
+        raw = raw.split(",", 1)[1]  # 去掉 data:image/...;base64, 前缀
+
+    img_bytes = base64.b64decode(raw)
+    out_bytes = remove(img_bytes, session=get_rembg_session())
+    b64 = base64.b64encode(out_bytes).decode("ascii")
+    return RemoveBgResponse(image="data:image/png;base64," + b64)
 
 
 @app.post("/reset")
