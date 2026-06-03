@@ -1,0 +1,28 @@
+# mini-agent 后端 systemd 服务单元
+# ------------------------------------------------------------
+# 作用：让后端开机自启、崩溃自动重启、后台常驻。
+#
+# 安装步骤（假设项目在 /home/ubuntu/mini-agent，用户名 ubuntu）：
+#   1. 按你的实际路径/用户名改下面的 User、WorkingDirectory、ExecStart
+#   2. sudo cp deploy/petbrain.service /etc/systemd/system/petbrain.service
+#   3. sudo systemctl daemon-reload
+#   4. sudo systemctl enable --now petbrain
+#   5. 查看状态/日志： systemctl status petbrain   /   journalctl -u petbrain -f
+# ------------------------------------------------------------
+
+[Unit]
+Description=mini-agent desktop pet backend (FastAPI)
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/mini-agent
+# 低内存服务器用轻量抠图模型；也可写在 .env 里
+Environment=REMBG_MODEL=u2netp
+ExecStart=/home/ubuntu/mini-agent/.venv/bin/uvicorn server:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

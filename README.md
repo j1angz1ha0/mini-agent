@@ -134,6 +134,11 @@ bash desktop-pet/start.sh
 
 macOS 用户也可直接双击根目录的 `启动桌面宠物.command`。
 
+### 3. 部署到服务器（让别人也能用）
+
+只需把**后端**部署到服务器（桌宠仍装在各用户电脑上），2G 内存即可。
+小白向手把手教程见 **[`deploy/README.md`](deploy/README.md)**，含一键脚本 `deploy/setup.sh`、systemd 自启、swap、防火墙全流程。
+
 ---
 
 ## 🎨 人设卡系统怎么玩

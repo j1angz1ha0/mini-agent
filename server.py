@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import base64
+import os
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from fastapi import FastAPI
@@ -52,7 +53,9 @@ def get_rembg_session():
     if _rembg_session is None:
         from rembg import new_session
 
-        _rembg_session = new_session("u2net")
+        # 抠图模型可配置：低内存服务器(如 2G)建议设 REMBG_MODEL=u2netp（约 4MB，省内存）
+        model_name = os.getenv("REMBG_MODEL", "u2net")
+        _rembg_session = new_session(model_name)
     return _rembg_session
 
 
